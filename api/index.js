@@ -53,7 +53,7 @@ function multerFilter(req, file, cb) {
     }
 }
 
-const upload = multer({ storage: multerStorage, fileFilter: multerFilter });
+const upload = multer({ storage: storage, fileFilter: multerFilter });
 
 const corsOptions = {
     origin: '*', // Allow only this origin
