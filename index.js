@@ -3,24 +3,43 @@ const uuidv4 = require("uuid").v4;
 const path = require("path");
 const cors = require("cors");
 const express = require("express");
+const { v2: cloudinary } = require("cloudinary");
+const { CloudinaryStorage } = require("multer-storage-cloudinary");
 const dotenv = require("dotenv").config();
 
- 
+const api = require("./api");
+
+cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET,
+  });
 
 const app = express();
 
-const multerStorage = multer.diskStorage({
-    destination: function (req, file, cb) {
-        cb(null, "./public/uploads");
+const storage = new CloudinaryStorage({
+    cloudinary: cloudinary,
+    params: async (req, file) => {
+      let folderName = "uploads";
+      let format = file.mimetype.split("/")[1]; // Get the file extension from the MIME type
+  
+      // Adjust the folder name and format for specific file types
+      if (file.mimetype.startsWith("image")) {
+        folderName = "images";
+      } else if (file.mimetype.startsWith("video")) {
+        folderName = "videos";
+      } else if (file.mimetype === "application/pdf") {
+        folderName = "pdfs";
+        format = "pdf"; // Ensure the format is set to "pdf" for PDFs
+      }
+  
+      return {
+        folder: folderName,
+        format: format,
+        public_id: `category-${file.originalname.split(".")[0]}-${Date.now()}`,
+      };
     },
-    filename: function (req, file, cb) {
-        const ext = file.mimetype.split("/")[1];
-        cb(
-            null,
-            `category-${uuidv4().split("-").join("")}-${Date.now()}.${ext}`
-        );
-    },
-});
+  });
 
 function multerFilter(req, file, cb) {
     const fileType = file.mimetype.split("/")[0];
@@ -36,7 +55,7 @@ function multerFilter(req, file, cb) {
     }
 }
 
-const upload = multer({ storage: multerStorage, fileFilter: multerFilter });
+const upload = multer({ storage: storage });
 
 const corsOptions = {
     origin: '*', // Allow only this origin
@@ -47,19 +66,19 @@ const corsOptions = {
 
 app.use(cors(corsOptions)); // Add CORS middleware
 app.use(express.json());
-app.use(express.static(path.join(__dirname, "public")));
+app.use(express.static(path.join(__dirname,"..","public")));
 
 app.post("/upload", upload.single("file"), (req, res) => {
-    if (req.fileValidationError) {
-        return res.status(400).json({ message: req.fileValidationError });
-    }
     if (!req.file) {
         return res.status(400).json({ message: "Please upload a file" });
-    }
-    res.status(200).json({
-        // message: `http://localhost:3000/${req.file.filename}`,
-        message: `http://localhost:${process.env.PORT}/uploads/${req.file.filename}`,
-    });
+      }
+      res.status(200).json({
+        message: req.file.path,
+      });
 });
 
-app.listen(process.env.PORT, () => console.log(`Server is running on port ${process.env.PORT}`));
+app.use("/api/v1", api.app);
+
+// app.listen(process.env.PORT, () => console.log(`Server is running on port ${process.env.PORT}`));
+
+module.exports = {app};
