@@ -11,7 +11,7 @@ const app = express();
 
 const multerStorage = multer.diskStorage({
     destination: function (req, file, cb) {
-        cb(null, "./uploads");
+        cb(null, path.join(__dirname, "..", "public", "uploads"));
     },
     filename: function (req, file, cb) {
         const ext = file.mimetype.split("/")[1];
@@ -47,7 +47,7 @@ const corsOptions = {
 
 app.use(cors(corsOptions)); // Add CORS middleware
 app.use(express.json());
-app.use(express.static(path.join(__dirname, "uploads")));
+app.use(express.static(path.join(__dirname,"..","public")));
 
 app.post("/upload", upload.single("file"), (req, res) => {
     if (req.fileValidationError) {
@@ -58,7 +58,7 @@ app.post("/upload", upload.single("file"), (req, res) => {
     }
     res.status(200).json({
         // message: `http://localhost:3000/${req.file.filename}`,
-        message: `http://localhost:${process.env.PORT}/${req.file.filename}`,
+        message: `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`,
     });
 });
 
