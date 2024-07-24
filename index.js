@@ -1,84 +1,115 @@
-const multer = require("multer");
-const uuidv4 = require("uuid").v4;
-const path = require("path");
-const cors = require("cors");
 const express = require("express");
+const path = require("path");
+const dotenv = require("dotenv").config();
+const cors = require("cors");
+const multer = require("multer");
 const { v2: cloudinary } = require("cloudinary");
 const { CloudinaryStorage } = require("multer-storage-cloudinary");
-const dotenv = require("dotenv").config();
+const uuidv4 = require("uuid").v4;
+const port = process.env.PORT || 3000;
+const api = require("./api"); // Ensure this path is correct
 
-const api = require("./api");
-
+// Cloudinary configuration
 cloudinary.config({
-    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-    api_key: process.env.CLOUDINARY_API_KEY,
-    api_secret: process.env.CLOUDINARY_API_SECRET,
-  });
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
 
 const app = express();
 
+// Cloudinary storage configuration
 const storage = new CloudinaryStorage({
-    cloudinary: cloudinary,
-    params: async (req, file) => {
-      let folderName = "uploads";
-      let format = file.mimetype.split("/")[1]; // Get the file extension from the MIME type
-  
-      // Adjust the folder name and format for specific file types
-      if (file.mimetype.startsWith("image")) {
-        folderName = "images";
-      } else if (file.mimetype.startsWith("video")) {
-        folderName = "videos";
-      } else if (file.mimetype === "application/pdf") {
-        folderName = "pdfs";
-        format = "pdf"; // Ensure the format is set to "pdf" for PDFs
-      }
-  
-      return {
-        folder: folderName,
-        format: format,
-        public_id: `category-${file.originalname.split(".")[0]}-${Date.now()}`,
-      };
-    },
-  });
+  cloudinary: cloudinary,
+  params: async (req, file) => {
+    let folderName = "uploads";
+    let format = file.mimetype.split("/")[1];
+
+    if (file.mimetype.startsWith("image")) {
+      folderName = "images";
+    } else if (file.mimetype.startsWith("video")) {
+      folderName = "videos";
+    } else if (file.mimetype === "application/pdf") {
+      folderName = "pdfs";
+      format = "pdf";
+    }
+
+    return {
+      folder: folderName,
+      format: format,
+      public_id: `category-${file.originalname.split(".")[0]}-${Date.now()}`,
+    };
+  },
+});
 
 function multerFilter(req, file, cb) {
-    const fileType = file.mimetype.split("/")[0];
-    if (
-        fileType.startsWith("image") ||
-        fileType.startsWith("video") ||
-        file.mimetype === "application/pdf"
-    ) {
-        cb(null, true);
-    } else {
-        req.fileValidationError = "Only Images, Videos, and PDFs are allowed!";
-        cb(null, false);
-    }
+  const fileType = file.mimetype.split("/")[0];
+  if (
+    fileType.startsWith("image") ||
+    fileType.startsWith("video") ||
+    file.mimetype === "application/pdf"
+  ) {
+    cb(null, true);
+  } else {
+    req.fileValidationError = "Only Images, Videos, and PDFs are allowed!";
+    cb(null, false);
+  }
 }
 
-const upload = multer({ storage: storage });
+const upload = multer({ storage: storage, fileFilter: multerFilter });
 
 const corsOptions = {
-    origin: '*', // Allow only this origin
-    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE', // Allow these methods
-    allowedHeaders: ['Content-Type', 'Authorization'], // Allow these headers
-    credentials: true, // Allow credentials
-  };
+  origin: '*',
+  methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,
+};
 
-app.use(cors(corsOptions)); // Add CORS middleware
+app.use(cors(corsOptions));
 app.use(express.json());
-app.use(express.static(path.join(__dirname,"..","public")));
+
+// Serve static files from the 'public' directory
+app.use(express.static(path.join(__dirname, "public")));
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  });
 
 app.post("/upload", upload.single("file"), (req, res) => {
-    if (!req.file) {
-        return res.status(400).json({ message: "Please upload a file" });
-      }
-      res.status(200).json({
-        message: req.file.path,
-      });
+  if (req.fileValidationError) {
+    return res.status(400).json({ message: req.fileValidationError });
+  }
+  if (!req.file) {
+    return res.status(400).json({ message: "Please upload a file" });
+  }
+  res.status(200).json({
+    message: req.file.path,
+  });
 });
 
 app.use("/api/v1", api.app);
 
 // app.listen(process.env.PORT, () => console.log(`Server is running on port ${process.env.PORT}`));
+app.listen(port, () => {
+    console.log(`Server is running on http://localhost:${port}`);
+  });
+module.exports = { app };
 
-module.exports = {app};
+
+
+
+// const express = require('express');
+// const path = require('path');
+// const app = express();
+// const port = process.env.PORT || 3000;
+
+// Serve static files from the "public" directory
+// app.use(express.static(path.join(__dirname, 'public')));
+
+// Define a route to serve the HTML file
+// app.get('/', (req, res) => {
+//   res.sendFile(path.join(__dirname, 'public', 'index.html'));
+// });
+
+
+
+
