@@ -18,8 +18,4 @@ router.get("/protected", (req, res) => {
 
 // يمكن إضافة مسارات أخرى هنا
 
-const app = express();
-app.use(express.json());
-app.use(router);
-
-module.exports = { app };
+module.exports = router;

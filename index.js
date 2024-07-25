@@ -7,7 +7,7 @@ const { v2: cloudinary } = require("cloudinary");
 const { CloudinaryStorage } = require("multer-storage-cloudinary");
 const uuidv4 = require("uuid").v4;
 const port = process.env.PORT || 3000;
-const api = require("./api"); // Ensure this path is correct
+const api = require("./api"); // تأكد من صحة هذا المسار
 
 // Cloudinary configuration
 cloudinary.config({
@@ -86,30 +86,10 @@ app.post("/upload", upload.single("file"), (req, res) => {
   });
 });
 
-app.use("/api/v1", api.app);
+app.use("/api/v1", api);
 
-// app.listen(process.env.PORT, () => console.log(`Server is running on port ${process.env.PORT}`));
 app.listen(port, () => {
     console.log(`Server is running on http://localhost:${port}`);
-  });
+});
+
 module.exports = { app };
-
-
-
-
-// const express = require('express');
-// const path = require('path');
-// const app = express();
-// const port = process.env.PORT || 3000;
-
-// Serve static files from the "public" directory
-// app.use(express.static(path.join(__dirname, 'public')));
-
-// Define a route to serve the HTML file
-// app.get('/', (req, res) => {
-//   res.sendFile(path.join(__dirname, 'public', 'index.html'));
-// });
-
-
-
-
